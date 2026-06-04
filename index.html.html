@@ -449,7 +449,22 @@
             <label>🆓 Free rest days / week</label>
             <input type="number" id="ptFree" min="0" max="7" step="1">
           </div>
+          <div class="pts-row">
+            <label>🚦 Daily points cap</label>
+            <input type="number" id="ptDailyCap" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>🏅 Weekly streak bonus (pts)</label>
+            <input type="number" id="ptWeeklyBonus" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>📅 Streak days required</label>
+            <input type="number" id="ptWeeklyDays" min="1" max="7" step="1">
+          </div>
         </div>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem">
+          🏅 Streak bonus = Gym + Cardio on the required number of days in a week. Bonus is applied Saturday 23:00 TT (UTC-4).
+        </p>
         <button onclick="savePointSettings()" class="btn btn-primary">Save Point Settings</button>
       </div>
       <div class="card">
@@ -599,7 +614,13 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
    POINT CONFIGURATION
 ═══════════════════════════════════════════ */
 function defaultPts() {
-  return { gym: 1, cardio: 1, yoga: 0.5, steps10k: 0.5, steps15k: 1, penalty: 0.5, free: 2 };
+  return {
+    gym: 1, cardio: 1, yoga: 0.5, steps10k: 0.5, steps15k: 1,
+    penalty: 0.5, free: 2,
+    dailyCap: 2,          // max points earnable from activities in a single day
+    weeklyBonus: 2,       // bonus points for hitting the weekly gym+cardio streak
+    weeklyBonusDays: 5    // how many gym+cardio days in a week triggers the bonus
+  };
 }
 
 function getPts() {
@@ -633,18 +654,40 @@ function sundayOf(date) {
   return d;
 }
 
+// Trinidad & Tobago = UTC-4 (no DST year-round).
+// The weekly Gym+Cardio bonus is released Saturday 23:00 TT
+// = Sunday 03:00 UTC of the following day.
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function bonusReleaseUTC(weekSunday) {
+  // weekSunday: local Date object for the Sunday of the week
+  const sat  = new Date(weekSunday); sat.setDate(weekSunday.getDate() + 6);
+  const next = new Date(sat);        next.setDate(sat.getDate() + 1); // Sunday after Saturday
+  // Saturday 23:00 TT = Sunday (next) 03:00 UTC
+  return new Date(localDateStr(next) + 'T03:00:00Z');
+}
+
+function isBonusReleased(weekSunday) {
+  return Date.now() >= bonusReleaseUTC(weekSunday).getTime();
+}
+
 function memberPoints(memberId) {
   const data = getData();
+  const p    = getPts();
   const active = data.logs.filter(l => l.memberId === memberId && !l.deleted);
-  if (!active.length) return { activity: 0, penalty: 0, total: 0 };
+  if (!active.length) return { activity: 0, penalty: 0, bonus: 0, total: 0 };
 
-  const activityPts = active.reduce((s, l) => s + (l.points || 0), 0);
+  // Apply daily cap when summing activity points
+  const activityPts = active.reduce((s, l) => s + Math.min(l.points || 0, p.dailyCap), 0);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const sorted = active.map(l => parseDate(l.date)).sort((a, b) => a - b);
   const firstDay = sorted[0];
 
   let penalty = 0;
+  let bonus   = 0;
   let wk = sundayOf(firstDay);
   const thisWk = sundayOf(today);
 
@@ -653,20 +696,27 @@ function memberPoints(memberId) {
     const effStart = wk > firstDay ? wk : firstDay;
     const effEnd   = wkEnd < today ? wkEnd : today;
 
+    const logsInWeek = active.filter(l => {
+      const d = parseDate(l.date);
+      return d >= wk && d <= wkEnd;
+    });
+
     if (effStart <= effEnd) {
       const elapsed = Math.floor((effEnd - effStart) / 86400000) + 1;
-      const logged  = active.filter(l => {
-        const d = parseDate(l.date);
-        return d >= wk && d <= wkEnd;
-      }).length;
-      const cfg  = getPts();
-      const rest = Math.max(0, elapsed - logged);
-      penalty += Math.max(0, rest - cfg.free) * cfg.penalty;
+      const rest = Math.max(0, elapsed - logsInWeek.length);
+      penalty += Math.max(0, rest - p.free) * p.penalty;
     }
+
+    // Weekly Gym+Cardio streak bonus — only awarded after Saturday 23:00 TT
+    if (isBonusReleased(wk)) {
+      const gcDays = logsInWeek.filter(l => l.gym && l.cardio).length;
+      if (gcDays >= p.weeklyBonusDays) bonus += p.weeklyBonus;
+    }
+
     wk = new Date(wk); wk.setDate(wk.getDate() + 7);
   }
 
-  return { activity: activityPts, penalty, total: activityPts - penalty };
+  return { activity: activityPts, penalty, bonus, total: activityPts - penalty + bonus };
 }
 
 /* ═══════════════════════════════════════════
@@ -1037,26 +1087,32 @@ function permDeleteLog(id) {
 ═══════════════════════════════════════════ */
 function loadPointSettings() {
   const p = getPts();
-  document.getElementById('ptGym').value      = p.gym;
-  document.getElementById('ptCardio').value   = p.cardio;
-  document.getElementById('ptYoga').value     = p.yoga;
-  document.getElementById('ptSteps10').value  = p.steps10k;
-  document.getElementById('ptSteps15').value  = p.steps15k;
-  document.getElementById('ptPenalty').value  = p.penalty;
-  document.getElementById('ptFree').value     = p.free;
+  document.getElementById('ptGym').value          = p.gym;
+  document.getElementById('ptCardio').value        = p.cardio;
+  document.getElementById('ptYoga').value          = p.yoga;
+  document.getElementById('ptSteps10').value       = p.steps10k;
+  document.getElementById('ptSteps15').value       = p.steps15k;
+  document.getElementById('ptPenalty').value       = p.penalty;
+  document.getElementById('ptFree').value          = p.free;
+  document.getElementById('ptDailyCap').value      = p.dailyCap;
+  document.getElementById('ptWeeklyBonus').value   = p.weeklyBonus;
+  document.getElementById('ptWeeklyDays').value    = p.weeklyBonusDays;
 }
 
 function savePointSettings() {
   const num = (id, def) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) || v < 0 ? def : v; };
   const def = defaultPts();
   const points = {
-    gym:      num('ptGym',      def.gym),
-    cardio:   num('ptCardio',   def.cardio),
-    yoga:     num('ptYoga',     def.yoga),
-    steps10k: num('ptSteps10',  def.steps10k),
-    steps15k: num('ptSteps15',  def.steps15k),
-    penalty:  num('ptPenalty',  def.penalty),
-    free:     Math.round(num('ptFree', def.free))
+    gym:            num('ptGym',          def.gym),
+    cardio:         num('ptCardio',       def.cardio),
+    yoga:           num('ptYoga',         def.yoga),
+    steps10k:       num('ptSteps10',      def.steps10k),
+    steps15k:       num('ptSteps15',      def.steps15k),
+    penalty:        num('ptPenalty',      def.penalty),
+    free:           Math.round(num('ptFree',          def.free)),
+    dailyCap:       num('ptDailyCap',     def.dailyCap),
+    weeklyBonus:    num('ptWeeklyBonus',  def.weeklyBonus),
+    weeklyBonusDays: Math.round(num('ptWeeklyDays', def.weeklyBonusDays))
   };
   const data = getData();
   data.points = points;
@@ -1078,9 +1134,12 @@ function refreshPointLabels() {
   set('pts-yoga',    p.yoga);
   set('pts-steps10', p.steps10k);
   set('pts-steps15', p.steps15k);
-  // Update the rest-day info box
+  // Update the rest-day / rules info box
   const info = document.getElementById('restDayInfo');
-  if (info) info.innerHTML = `⚠️ Each week (Sun–Sat) you get <strong>${p.free} free rest day${p.free !== 1 ? 's' : ''}</strong>. Every additional rest day deducts <strong>${p.penalty} point${p.penalty !== 1 ? 's' : ''}</strong>.`;
+  if (info) info.innerHTML =
+    `⚠️ <strong>Daily cap:</strong> max <strong>${p.dailyCap} pts</strong> per day from activities. &nbsp;|&nbsp; ` +
+    `<strong>Rest days:</strong> ${p.free} free per week (Sun–Sat); extras deduct <strong>${p.penalty} pt</strong> each. &nbsp;|&nbsp; ` +
+    `🏅 <strong>Streak bonus:</strong> Gym + Cardio on <strong>${p.weeklyBonusDays} days</strong> in a week = <strong>+${p.weeklyBonus} pts</strong> (awarded Sat 23:00 TT).`;
 }
 
 function changeAdminPass() {
@@ -1208,14 +1267,16 @@ function renderUserHistory() {
     .sort((a, b) => b.date.localeCompare(a.date));
 
   // Score breakdown
-  const { activity, penalty, total } = memberPoints(me.id);
+  const { activity, penalty, bonus, total } = memberPoints(me.id);
+  const p  = getPts();
   const bd = document.getElementById('uScoreBreakdown');
   bd.style.display = '';
-  bd.innerHTML = `
-    Activity points: <strong>${activity.toFixed(1)}</strong> &nbsp;
-    <span class="pen">− Rest day deductions: ${penalty.toFixed(1)}</span> &nbsp;
-    = <span class="total">Total: ${total.toFixed(1)}</span>
-    <br><small style="color:var(--muted)">Rest days beyond 2 per week (Sun–Sat) deduct 0.5 pts each.</small>`;
+  bd.innerHTML =
+    `Activity pts: <strong>${activity.toFixed(1)}</strong> (cap ${p.dailyCap}/day)` +
+    (penalty > 0 ? ` &nbsp;<span class="pen">− Rest deductions: ${penalty.toFixed(1)}</span>` : '') +
+    (bonus   > 0 ? ` &nbsp;<span style="color:var(--accent)">+ Weekly streak bonus: ${bonus.toFixed(1)}</span>` : '') +
+    ` &nbsp;= <span class="total">Total: ${total.toFixed(1)}</span>` +
+    `<br><small style="color:var(--muted)">Streak bonus: Gym + Cardio on ${p.weeklyBonusDays}+ days in a week = +${p.weeklyBonus} pts (released Sat 23:00 TT).</small>`;
 
   if (!logs.length) { el.innerHTML = '<p class="empty">No activities logged yet.</p>'; return; }
 
