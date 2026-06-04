@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group Activity Tracker</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface2: #f8fafc;
+      --border: #e2e8f0;
+      --primary: #6366f1;
+      --primary-h: #4f46e5;
+      --accent: #10b981;
+      --accent-h: #059669;
+      --danger: #ef4444;
+      --danger-h: #dc2626;
+      --warning: #d97706;
+      --text: #0f172a;
+      --muted: #64748b;
+      --r: 10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-inner {
+      max-width: 1140px; margin: 0 auto;
+      height: 60px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { font-size: 1.2rem; font-weight: 700; }
+    .logo span { color: var(--primary); }
+
+    /* ── Layout ── */
+    .container { max-width: 1140px; margin: 0 auto; padding: 1.5rem; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .home-grid { display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; align-items: start; }
+    @media (max-width: 800px) { .home-grid { grid-template-columns: 1fr; } }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 1.5rem; margin-bottom: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .card > h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0.5rem 1.2rem; border: none; border-radius: 6px;
+      font-size: 0.875rem; font-weight: 500; cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary   { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-h); }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: var(--accent-h); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: var(--danger-h); }
+    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+    .btn-full { width: 100%; }
+
+    /* ── Inputs ── */
+    .input, select.input {
+      width: 100%; padding: 0.6rem 0.9rem;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 0.9rem;
+      outline: none; transition: border-color 0.15s;
+    }
+    .input:focus, select.input:focus { border-color: var(--primary); }
+    select.input option { background: var(--surface); }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.35rem; font-weight: 500; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; gap: 0.25rem;
+      background: var(--bg); padding: 0.25rem;
+      border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      flex: 1; padding: 0.5rem; background: transparent;
+      border: none; border-radius: 6px;
+      color: var(--muted); font-size: 0.875rem; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--primary); color: #fff; font-weight: 600; }
+    .tab-btn:not(.active):hover { background: var(--surface2); color: var(--text); }
+
+    /* ── Section label ── */
+    .sec { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem; }
+    .sec + .sec, .divider + .sec { margin-top: 1.5rem; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+    /* ── Leaderboard ── */
+    .lb-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .lb-table thead th {
+      text-align: left; padding: 0.6rem 0.75rem;
+      background: var(--surface2); color: var(--muted);
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .lb-table thead th:first-child { border-radius: 6px 0 0 6px; }
+    .lb-table thead th:last-child  { border-radius: 0 6px 6px 0; }
+    .lb-table td { padding: 0.72rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .lb-table .member-row { cursor: pointer; }
+    .lb-table .member-row:hover td { background: rgba(99,102,241,0.06); }
+    .pts-cell { font-weight: 700; color: var(--accent); font-size: 1rem; }
+    .expand-icon { color: var(--muted); font-size: 0.72rem; }
+
+    .detail-wrap { background: var(--bg); border-radius: 6px; margin: 0.25rem 0.5rem 0.5rem; overflow: hidden; }
+    .detail-inner { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .detail-inner th { padding: 0.45rem 0.75rem; background: var(--surface2); color: var(--muted); font-size: 0.72rem; text-transform: uppercase; text-align: left; }
+    .detail-inner td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .detail-inner tr:last-child td { border: none; }
+
+    /* ── Member cards ── */
+    .member-card {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; padding: 0.75rem 1rem;
+      background: var(--surface2); border-radius: 8px; margin-bottom: 0.5rem;
+    }
+    .member-info { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+    .member-info strong { font-size: 0.95rem; }
+    .member-info span { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .member-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+
+    /* ── Data table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .data-table th {
+      text-align: left; padding: 0.6rem 0.75rem;
+      background: var(--surface2); color: var(--muted);
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .data-table th:first-child { border-radius: 6px 0 0 6px; }
+    .data-table th:last-child  { border-radius: 0 6px 6px 0; }
+    .data-table td { padding: 0.7rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .table-scroll { overflow-x: auto; }
+
+    /* ── Check / radio labels ── */
+    .check-group, .radio-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .check-label, .radio-label {
+      display: flex; align-items: center; gap: 0.6rem;
+      cursor: pointer; font-size: 0.9rem; padding: 0.55rem 0.85rem;
+      background: var(--surface2); border-radius: 7px;
+      border: 1px solid var(--border); transition: border-color 0.15s;
+      user-select: none;
+    }
+    .check-label:hover, .radio-label:hover { border-color: var(--primary); }
+    .check-label input, .radio-label input { accent-color: var(--primary); width: 15px; height: 15px; flex-shrink: 0; }
+    .lbl-pts { margin-left: auto; color: var(--accent); font-size: 0.78rem; font-weight: 700; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block; padding: 0.15rem 0.55rem;
+      border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+    }
+    .badge-green  { background: var(--accent); color: #fff; }
+    .badge-purple { background: var(--primary); color: #fff; }
+    .badge-red    { background: var(--danger); color: #fff; }
+
+    /* ── Stats row ── */
+    .stats-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .stat-card { flex: 1; min-width: 100px; background: var(--surface2); border-radius: 8px; padding: 0.85rem 1rem; }
+    .stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+    .stat-value.rank { color: var(--primary); }
+
+    /* ── Score breakdown ── */
+    .score-breakdown {
+      background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 7px; padding: 0.75rem 1rem; font-size: 0.82rem;
+      margin-bottom: 1rem; line-height: 1.8;
+    }
+    .score-breakdown .pen { color: var(--danger); }
+    .score-breakdown .total { font-weight: 700; color: var(--accent); }
+
+    /* ── Preview ── */
+    .preview-box {
+      background: var(--surface2); border-radius: 7px;
+      padding: 0.6rem 0.9rem; font-size: 0.85rem;
+      color: var(--muted); margin-bottom: 1rem;
+      border: 1px solid var(--border); min-height: 36px;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 7px; padding: 0.65rem 0.9rem;
+      font-size: 0.8rem; color: var(--warning); margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+
+    /* ── Admin grid ── */
+    .add-member-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.75rem; align-items: end; }
+    @media (max-width: 600px) { .add-member-grid { grid-template-columns: 1fr; } }
+
+    /* ── Point settings grid ── */
+    /* auto-fill keeps empty tracks so the last row doesn't stretch */
+    .pts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin-bottom: 1.25rem; }
+    .pts-row  { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1rem; background: var(--surface2); border-radius: 7px; border: 1px solid var(--border); gap: 1rem; }
+    .pts-row label { font-size: 0.875rem; font-weight: 500; line-height: 1; }
+    .pts-row input {
+      width: 58px; flex-shrink: 0; text-align: center;
+      padding: 0.4rem 0.5rem; line-height: 1;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text);
+      font-size: 0.9rem; font-weight: 700; outline: none;
+      /* remove browser spin-buttons that offset centering */
+      -moz-appearance: textfield;
+    }
+    .pts-row input::-webkit-outer-spin-button,
+    .pts-row input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .pts-row input:focus { border-color: var(--primary); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      padding: 0.75rem 1.25rem; border-radius: 8px;
+      font-size: 0.875rem; font-weight: 500;
+      z-index: 9999; opacity: 0; transform: translateY(16px);
+      transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: var(--accent); color: #fff; }
+    .toast.error   { background: var(--danger); color: #fff; }
+    .toast.info    { background: var(--primary); color: #fff; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 1rem;
+    }
+    .modal-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); width: 100%; max-width: 480px;
+      max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;
+    }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .modal-head h3 { font-size: 1rem; font-weight: 700; }
+    .modal-body { padding: 1.25rem; flex: 1; }
+    .modal-foot {
+      display: flex; justify-content: flex-end; gap: 0.75rem;
+      padding: 1rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .close-x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0.2rem 0.4rem; border-radius: 4px; }
+    .close-x:hover { color: var(--text); background: var(--surface2); }
+
+    /* ── Misc ── */
+    .empty { color: var(--muted); font-size: 0.875rem; text-align: center; padding: 2rem 1rem; }
+    code { font-family: monospace; background: var(--bg); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+    .danger-zone { border-color: rgba(239,68,68,0.35) !important; }
+    .danger-zone .sec { color: var(--danger); }
+    .rank-1 .rank-cell { color: #fbbf24; }
+    .rank-2 .rank-cell { color: #94a3b8; }
+    .rank-3 .rank-cell { color: #d97706; }
+  </style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- Modal -->
+<div id="modal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle">Confirm</h3>
+      <button class="close-x" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody" class="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button id="modalOkBtn" class="btn btn-primary" onclick="confirmModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-inner">
+    <div class="logo">Activity <span>Tracker</span></div>
+    <button id="logoutBtn" style="display:none" onclick="logout()" class="btn btn-secondary">Logout</button>
+  </div>
+</header>
+
+<!-- ═══════════════════ HOME PAGE ═══════════════════ -->
+<div id="page-home" class="page active">
+  <div class="container">
+    <div class="home-grid">
+
+      <!-- Leaderboard (public) -->
+      <div class="card" style="margin-bottom:0">
+        <h2>🏆 Leaderboard</h2>
+        <div id="lb-home"><p class="empty">No members yet.</p></div>
+      </div>
+
+      <!-- Login -->
+      <div class="card" style="margin-bottom:0">
+        <h2>Login</h2>
+        <div class="tabs" style="margin-bottom:1.25rem">
+          <button class="tab-btn active" id="ltMember" onclick="switchLoginTab('member')">Member</button>
+          <button class="tab-btn" id="ltAdmin" onclick="switchLoginTab('admin')">Admin</button>
+        </div>
+
+        <!-- Member -->
+        <div id="login-member">
+          <div class="form-group">
+            <label>Your name</label>
+            <select id="memberSelect" class="input">
+              <option value="">-- Select your name --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Passcode</label>
+            <input type="password" id="memberPasscode" class="input" maxlength="4"
+              inputmode="numeric" placeholder="4-digit passcode"
+              onkeydown="if(event.key==='Enter')userLogin()">
+          </div>
+          <button onclick="userLogin()" class="btn btn-primary btn-full">Login</button>
+        </div>
+
+        <!-- Admin -->
+        <div id="login-admin" style="display:none">
+          <div class="form-group">
+            <label>Admin password</label>
+            <input type="password" id="adminPassword" class="input"
+              placeholder="Enter admin password"
+              onkeydown="if(event.key==='Enter')adminLogin()">
+          </div>
+          <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem">Default password: <code>Admin@1234</code></p>
+          <button onclick="adminLogin()" class="btn btn-primary btn-full">Login as Admin</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ADMIN PAGE ═══════════════════ -->
+<div id="page-admin" class="page">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
+      <h1 style="font-size:1.4rem;font-weight:800">Admin Dashboard</h1>
+      <span class="badge badge-purple">ADMIN</span>
+    </div>
+
+    <div class="tabs" id="adminTabs">
+      <button class="tab-btn active" onclick="showAdminTab('tab-a-board',this)">Leaderboard</button>
+      <button class="tab-btn" onclick="showAdminTab('tab-a-members',this)">Members</button>
+      <button class="tab-btn" onclick="showAdminTab('tab-a-settings',this)">Settings</button>
+      <button class="tab-btn" onclick="showAdminTab('tab-a-recycle',this)">Recycle Bin</button>
+    </div>
+
+    <!-- Members -->
+    <div id="tab-a-members" class="tab-content" style="display:none">
+      <div class="card">
+        <p class="sec">Add New Member</p>
+        <div class="add-member-grid">
+          <div class="form-group" style="margin:0">
+            <label>Full name</label>
+            <input type="text" id="newName" class="input" placeholder="e.g. Jane Doe"
+              onkeydown="if(event.key==='Enter')addMember()">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Passcode (4 digits)</label>
+            <input type="text" id="newPasscode" class="input" placeholder="e.g. 4827"
+              maxlength="4" inputmode="numeric"
+              onkeydown="if(event.key==='Enter')addMember()">
+          </div>
+          <button onclick="addMember()" class="btn btn-primary" style="height:40px">Add</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="sec">Current Members</p>
+        <div id="admin-members"><p class="empty">No members yet.</p></div>
+      </div>
+    </div>
+
+    <!-- Recycle Bin -->
+    <div id="tab-a-recycle" class="tab-content" style="display:none">
+      <div class="card">
+        <p class="sec">Deleted Members</p>
+        <div id="rb-members"><p class="empty">No deleted members.</p></div>
+        <hr class="divider">
+        <p class="sec">Deleted Activity Logs</p>
+        <div id="rb-logs"><p class="empty">No deleted logs.</p></div>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="tab-a-board" class="tab-content">
+      <div class="card">
+        <h2>🏆 Leaderboard</h2>
+        <div id="lb-admin"><p class="empty">No members yet.</p></div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="tab-a-settings" class="tab-content" style="display:none">
+      <div class="card">
+        <p class="sec">Point System</p>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.1rem">Adjusting values instantly recalculates all member scores.</p>
+        <div class="pts-grid">
+          <div class="pts-row">
+            <label>💪 Gym</label>
+            <input type="number" id="ptGym" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>🏃 Cardio / Sport</label>
+            <input type="number" id="ptCardio" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>🧘 Yoga / Stretch</label>
+            <input type="number" id="ptYoga" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>👟 10,000 Steps</label>
+            <input type="number" id="ptSteps10" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>🔥 15,000 Steps</label>
+            <input type="number" id="ptSteps15" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>😴 Rest day penalty</label>
+            <input type="number" id="ptPenalty" min="0" step="0.5">
+          </div>
+          <div class="pts-row">
+            <label>🆓 Free rest days / week</label>
+            <input type="number" id="ptFree" min="0" max="7" step="1">
+          </div>
+        </div>
+        <button onclick="savePointSettings()" class="btn btn-primary">Save Point Settings</button>
+      </div>
+      <div class="card">
+        <p class="sec">Change Admin Password</p>
+        <div class="form-group">
+          <label>Current password</label>
+          <input type="password" id="currPass" class="input" placeholder="Current password">
+        </div>
+        <div class="form-group">
+          <label>New password</label>
+          <input type="password" id="newPass" class="input" placeholder="New password">
+        </div>
+        <div class="form-group">
+          <label>Confirm new password</label>
+          <input type="password" id="confPass" class="input" placeholder="Confirm new password">
+        </div>
+        <button onclick="changeAdminPass()" class="btn btn-primary">Change Password</button>
+      </div>
+      <div class="card danger-zone">
+        <p class="sec">Data Management</p>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">Export a backup before making changes. Import will replace all data.</p>
+        <div style="display:flex;gap:0.75rem">
+          <button onclick="exportData()" class="btn btn-secondary">Export Backup</button>
+          <button onclick="importData()" class="btn btn-secondary">Import Backup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ USER PAGE ═══════════════════ -->
+<div id="page-user" class="page">
+  <div class="container">
+    <h1 id="userGreeting" style="font-size:1.4rem;font-weight:800;margin-bottom:1rem">Welcome!</h1>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Points</div>
+        <div id="uPts" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Days Logged</div>
+        <div id="uLogs" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rank</div>
+        <div id="uRank" class="stat-value rank">—</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="userTabs">
+      <button class="tab-btn active" onclick="showUserTab('tab-u-board',this)">Leaderboard</button>
+      <button class="tab-btn" onclick="showUserTab('tab-u-log',this)">Log Activity</button>
+      <button class="tab-btn" onclick="showUserTab('tab-u-history',this)">My History</button>
+    </div>
+
+    <!-- Leaderboard (default visible) -->
+    <div id="tab-u-board" class="tab-content">
+      <div class="card">
+        <h2>🏆 Leaderboard</h2>
+        <div id="lb-user"><p class="empty">No members yet.</p></div>
+      </div>
+    </div>
+
+    <!-- Log Activity -->
+    <div id="tab-u-log" class="tab-content" style="display:none">
+      <div class="card">
+        <h2>Log Activity</h2>
+        <div id="restDayInfo" class="info-box"></div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="actDate" class="input">
+        </div>
+
+        <div class="form-group">
+          <label>Activities (select all that apply)</label>
+          <div class="check-group">
+            <label class="check-label">
+              <input type="checkbox" id="aGym">
+              💪 Gym <span class="lbl-pts" id="pts-gym">+1 pt</span>
+            </label>
+            <label class="check-label">
+              <input type="checkbox" id="aCardio">
+              🏃 Cardio / Sport <span class="lbl-pts" id="pts-cardio">+1 pt</span>
+            </label>
+            <label class="check-label">
+              <input type="checkbox" id="aYoga">
+              🧘 Yoga / Stretch <span class="lbl-pts" id="pts-yoga">+0.5 pt</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Steps milestone</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="steps" value="0" checked>
+              🚶 No milestone <span class="lbl-pts">—</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="steps" value="10">
+              👟 10,000 Steps <span class="lbl-pts" id="pts-steps10">+0.5 pt</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="steps" value="15">
+              🔥 15,000 Steps <span class="lbl-pts" id="pts-steps15">+1 pt</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="logPreview" class="preview-box">Select activities to preview your points.</div>
+        <button onclick="logActivity()" class="btn btn-primary">Save Activity</button>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div id="tab-u-history" class="tab-content" style="display:none">
+      <div class="card">
+        <h2>My Activity History</h2>
+        <div id="uScoreBreakdown" class="score-breakdown" style="display:none"></div>
+        <div id="user-history"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA LAYER
+═══════════════════════════════════════════ */
+const KEY = 'activityTrackerData';
+
+function getData() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || seed(); } catch { return seed(); }
+}
+
+function seed() {
+  return { adminPassword: 'Admin@1234', members: [], logs: [], points: defaultPts() };
+}
+
+function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 9); }
+
+/* ═══════════════════════════════════════════
+   POINT CONFIGURATION
+═══════════════════════════════════════════ */
+function defaultPts() {
+  return { gym: 1, cardio: 1, yoga: 0.5, steps10k: 0.5, steps15k: 1, penalty: 0.5, free: 2 };
+}
+
+function getPts() {
+  const data = getData();
+  return Object.assign({}, defaultPts(), data.points || {});
+}
+
+/* ═══════════════════════════════════════════
+   POINT CALCULATION
+═══════════════════════════════════════════ */
+function logPts(log) {
+  const p = getPts();
+  let pts = 0;
+  if (log.gym)          pts += p.gym;
+  if (log.cardio)       pts += p.cardio;
+  if (log.yoga)         pts += p.yoga;
+  if (log.steps === 10) pts += p.steps10k;
+  if (log.steps === 15) pts += p.steps15k;
+  return pts;
+}
+
+function parseDate(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function sundayOf(date) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay());
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function memberPoints(memberId) {
+  const data = getData();
+  const active = data.logs.filter(l => l.memberId === memberId && !l.deleted);
+  if (!active.length) return { activity: 0, penalty: 0, total: 0 };
+
+  const activityPts = active.reduce((s, l) => s + (l.points || 0), 0);
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const sorted = active.map(l => parseDate(l.date)).sort((a, b) => a - b);
+  const firstDay = sorted[0];
+
+  let penalty = 0;
+  let wk = sundayOf(firstDay);
+  const thisWk = sundayOf(today);
+
+  while (wk <= thisWk) {
+    const wkEnd = new Date(wk); wkEnd.setDate(wk.getDate() + 6);
+    const effStart = wk > firstDay ? wk : firstDay;
+    const effEnd   = wkEnd < today ? wkEnd : today;
+
+    if (effStart <= effEnd) {
+      const elapsed = Math.floor((effEnd - effStart) / 86400000) + 1;
+      const logged  = active.filter(l => {
+        const d = parseDate(l.date);
+        return d >= wk && d <= wkEnd;
+      }).length;
+      const cfg  = getPts();
+      const rest = Math.max(0, elapsed - logged);
+      penalty += Math.max(0, rest - cfg.free) * cfg.penalty;
+    }
+    wk = new Date(wk); wk.setDate(wk.getDate() + 7);
+  }
+
+  return { activity: activityPts, penalty, total: activityPts - penalty };
+}
+
+/* ═══════════════════════════════════════════
+   FORMATTING
+═══════════════════════════════════════════ */
+function fmtDate(str) {
+  return parseDate(str).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function fmtDT(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function actLabel(log) {
+  const p = [];
+  if (log.gym)          p.push('Gym');
+  if (log.cardio)       p.push('Cardio/Sport');
+  if (log.yoga)         p.push('Yoga/Stretch');
+  if (log.steps === 10) p.push('10k Steps');
+  if (log.steps === 15) p.push('15k Steps');
+  return p.length ? p.join(', ') : 'Rest Day';
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showAdminTab(tabId, btn) {
+  document.querySelectorAll('#page-admin .tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById(tabId).style.display = '';
+  document.querySelectorAll('#adminTabs .tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tabId === 'tab-a-recycle')  renderRecycleBin();
+  if (tabId === 'tab-a-board')    renderLB('lb-admin');
+  if (tabId === 'tab-a-members')  renderAdminMembers();
+  if (tabId === 'tab-a-settings') loadPointSettings();
+}
+
+function showUserTab(tabId, btn) {
+  document.querySelectorAll('#page-user .tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById(tabId).style.display = '';
+  document.querySelectorAll('#userTabs .tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tabId === 'tab-u-history') renderUserHistory();
+  if (tabId === 'tab-u-board')   { renderLB('lb-user'); updateStats(); }
+}
+
+function switchLoginTab(type) {
+  document.getElementById('login-member').style.display = type === 'member' ? '' : 'none';
+  document.getElementById('login-admin').style.display  = type === 'admin'  ? '' : 'none';
+  document.getElementById('ltMember').classList.toggle('active', type === 'member');
+  document.getElementById('ltAdmin').classList.toggle('active', type === 'admin');
+}
+
+/* ═══════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════ */
+let me = null;
+
+function adminLogin() {
+  const pw = document.getElementById('adminPassword').value;
+  const data = getData();
+  if (pw !== data.adminPassword) { toast('Invalid password', 'error'); return; }
+  me = { type: 'admin' };
+  document.getElementById('logoutBtn').style.display = '';
+  showPage('page-admin');
+  showAdminTab('tab-a-board', document.querySelector('#adminTabs .tab-btn'));
+}
+
+function userLogin() {
+  const id   = document.getElementById('memberSelect').value;
+  const code = document.getElementById('memberPasscode').value;
+  const data = getData();
+  const m = data.members.find(x => x.id === id && !x.deleted);
+  if (!m)           { toast('Please select a member', 'error'); return; }
+  if (code !== m.passcode) { toast('Invalid passcode', 'error'); return; }
+  me = { type: 'member', id: m.id, name: m.name };
+  document.getElementById('logoutBtn').style.display = '';
+  document.getElementById('userGreeting').textContent = `Welcome, ${m.name}! 👋`;
+  showPage('page-user');
+  setDefaultDate();
+  refreshPointLabels();
+  setupPreview();
+  updateStats();
+  // Default to Leaderboard tab on login
+  showUserTab('tab-u-board', document.querySelector('#userTabs .tab-btn'));
+}
+
+function logout() {
+  me = null;
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('adminPassword').value = '';
+  document.getElementById('memberPasscode').value = '';
+  document.getElementById('memberSelect').value = '';
+  // Reset user tabs — Leaderboard is tab index 0 in the new order
+  document.querySelectorAll('#page-user .tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById('tab-u-board').style.display = '';
+  document.querySelectorAll('#userTabs .tab-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+  showPage('page-home');
+  refreshDropdown();
+  renderLB('lb-home');
+}
+
+/* ═══════════════════════════════════════════
+   MEMBER DROPDOWN
+═══════════════════════════════════════════ */
+function refreshDropdown() {
+  const data = getData();
+  const sel = document.getElementById('memberSelect');
+  const active = data.members.filter(m => !m.deleted).sort((a, b) => a.name.localeCompare(b.name));
+  sel.innerHTML = '<option value="">-- Select your name --</option>' +
+    active.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   LEADERBOARD
+═══════════════════════════════════════════ */
+function renderLB(containerId) {
+  const data = getData();
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const active = data.members.filter(m => !m.deleted);
+  if (!active.length) { el.innerHTML = '<p class="empty">No members yet.</p>'; return; }
+
+  const ranked = active.map(m => {
+    const { total } = memberPoints(m.id);
+    return { ...m, total };
+  }).sort((a, b) => b.total - a.total);
+
+  // Unique prefix per container prevents getElementById conflicts across
+  // the three simultaneous leaderboard instances in the DOM
+  const pfx = containerId;
+  const medal = i => ['🥇', '🥈', '🥉'][i] ?? `${i + 1}`;
+
+  el.innerHTML = `
+    <div class="table-scroll">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th style="width:52px">#</th>
+            <th>Member</th>
+            <th style="width:100px">Points</th>
+            <th style="width:36px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${ranked.map((m, i) => {
+            const logs = data.logs
+              .filter(l => l.memberId === m.id && !l.deleted)
+              .sort((a, b) => b.date.localeCompare(a.date));
+            const detailRows = logs.map(l => `
+              <tr>
+                <td style="white-space:nowrap">${fmtDate(l.date)}</td>
+                <td>${actLabel(l)}</td>
+                <td style="text-align:right"><span class="badge badge-green">${l.points.toFixed(1)} pt</span></td>
+              </tr>`).join('') ||
+              `<tr><td colspan="3" class="empty" style="padding:0.75rem">No activities logged yet</td></tr>`;
+            const rowId  = `ld-${pfx}-${m.id}`;
+            const iconId = `li-${pfx}-${m.id}`;
+            return `
+              <tr class="member-row rank-${i + 1}" onclick="toggleDetail('${rowId}','${iconId}')">
+                <td class="rank-cell" style="font-size:1.15rem;text-align:center">${medal(i)}</td>
+                <td><strong>${m.name}</strong></td>
+                <td class="pts-cell">${m.total.toFixed(1)}</td>
+                <td style="text-align:center"><span id="${iconId}" class="expand-icon">▼</span></td>
+              </tr>
+              <tr id="${rowId}" style="display:none">
+                <td colspan="4" style="padding:0">
+                  <div class="detail-wrap">
+                    <table class="detail-inner">
+                      <thead><tr><th>Date</th><th>Activities</th><th style="text-align:right">Points</th></tr></thead>
+                      <tbody>${detailRows}</tbody>
+                    </table>
+                  </div>
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function toggleDetail(rowId, iconId) {
+  const row  = document.getElementById(rowId);
+  const icon = document.getElementById(iconId);
+  if (!row) return;
+  const show = row.style.display === 'none';
+  row.style.display = show ? '' : 'none';
+  if (icon) icon.textContent = show ? '▲' : '▼';
+}
+
+/* ═══════════════════════════════════════════
+   ADMIN – MEMBER MANAGEMENT
+═══════════════════════════════════════════ */
+function renderAdminMembers() {
+  const data = getData();
+  const el = document.getElementById('admin-members');
+  const active = data.members.filter(m => !m.deleted).sort((a, b) => a.name.localeCompare(b.name));
+  if (!active.length) { el.innerHTML = '<p class="empty">No members yet.</p>'; return; }
+  el.innerHTML = active.map(m => `
+    <div class="member-card">
+      <div class="member-info">
+        <strong>${m.name}</strong>
+        <span>Passcode: <code>${m.passcode}</code></span>
+      </div>
+      <div class="member-actions">
+        <button class="btn btn-sm btn-secondary" onclick="editMember('${m.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="softDeleteMember('${m.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function addMember() {
+  const name    = document.getElementById('newName').value.trim();
+  const passcode = document.getElementById('newPasscode').value.trim();
+  if (!name) { toast('Name is required', 'error'); return; }
+  if (!/^\d{4}$/.test(passcode)) { toast('Passcode must be exactly 4 digits', 'error'); return; }
+  const data = getData();
+  if (data.members.find(m => m.name.toLowerCase() === name.toLowerCase() && !m.deleted)) {
+    toast('A member with this name already exists', 'error'); return;
+  }
+  data.members.push({ id: uid(), name, passcode, deleted: false, deletedAt: null });
+  save(data);
+  document.getElementById('newName').value = '';
+  document.getElementById('newPasscode').value = '';
+  renderAdminMembers();
+  refreshDropdown();
+  renderLB('lb-home');
+  toast(`${name} added`);
+}
+
+function editMember(id) {
+  const data = getData();
+  const m = data.members.find(x => x.id === id);
+  if (!m) return;
+  showModal('Edit Member', `
+    <div class="form-group"><label>Name</label><input type="text" id="_eName" class="input" value="${m.name}"></div>
+    <div class="form-group"><label>Passcode (4 digits)</label><input type="text" id="_eCode" class="input" maxlength="4" inputmode="numeric" value="${m.passcode}"></div>
+  `, 'Save', () => {
+    const name    = document.getElementById('_eName').value.trim();
+    const passcode = document.getElementById('_eCode').value.trim();
+    if (!name) { toast('Name is required', 'error'); return; }
+    if (!/^\d{4}$/.test(passcode)) { toast('Passcode must be exactly 4 digits', 'error'); return; }
+    if (data.members.find(x => x.name.toLowerCase() === name.toLowerCase() && !x.deleted && x.id !== id)) {
+      toast('Name already taken', 'error'); return;
+    }
+    m.name = name; m.passcode = passcode;
+    save(data);
+    renderAdminMembers();
+    refreshDropdown();
+    closeModal();
+    toast('Member updated');
+  });
+}
+
+function softDeleteMember(id) {
+  const data = getData();
+  const m = data.members.find(x => x.id === id);
+  confirm_(`Move <strong>${m?.name}</strong> to recycle bin?`, () => {
+    m.deleted = true; m.deletedAt = new Date().toISOString();
+    save(data);
+    renderAdminMembers();
+    refreshDropdown();
+    renderLB('lb-home');
+    toast(`${m.name} moved to recycle bin`);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   ADMIN – RECYCLE BIN
+═══════════════════════════════════════════ */
+function renderRecycleBin() {
+  renderRBMembers();
+  renderRBLogs();
+}
+
+function renderRBMembers() {
+  const data = getData();
+  const el = document.getElementById('rb-members');
+  const deleted = data.members.filter(m => m.deleted).sort((a, b) => (b.deletedAt || '').localeCompare(a.deletedAt || ''));
+  if (!deleted.length) { el.innerHTML = '<p class="empty">No deleted members.</p>'; return; }
+  el.innerHTML = deleted.map(m => `
+    <div class="member-card">
+      <div class="member-info">
+        <strong>${m.name}</strong>
+        <span>Deleted ${fmtDT(m.deletedAt)}</span>
+      </div>
+      <div class="member-actions">
+        <button class="btn btn-sm btn-accent" onclick="restoreMember('${m.id}')">Restore</button>
+        <button class="btn btn-sm btn-danger" onclick="permDeleteMember('${m.id}')">Delete Forever</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderRBLogs() {
+  const data = getData();
+  const el = document.getElementById('rb-logs');
+  const deleted = data.logs.filter(l => l.deleted).sort((a, b) => (b.deletedAt || '').localeCompare(a.deletedAt || ''));
+  if (!deleted.length) { el.innerHTML = '<p class="empty">No deleted logs.</p>'; return; }
+  el.innerHTML = deleted.map(l => {
+    const m = data.members.find(x => x.id === l.memberId);
+    return `
+      <div class="member-card">
+        <div class="member-info">
+          <strong>${m?.name ?? 'Unknown'}</strong>
+          <span>${fmtDate(l.date)} — ${actLabel(l)}</span>
+          <span><span class="badge badge-green">${l.points.toFixed(1)} pt</span> &nbsp;·&nbsp; Deleted ${fmtDT(l.deletedAt)}</span>
+        </div>
+        <div class="member-actions">
+          <button class="btn btn-sm btn-accent" onclick="restoreLog('${l.id}')">Restore</button>
+          <button class="btn btn-sm btn-danger" onclick="permDeleteLog('${l.id}')">Delete Forever</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function restoreMember(id) {
+  const data = getData();
+  const m = data.members.find(x => x.id === id);
+  m.deleted = false; m.deletedAt = null;
+  save(data);
+  renderRBMembers();
+  renderAdminMembers();
+  refreshDropdown();
+  renderLB('lb-home');
+  toast(`${m.name} restored`);
+}
+
+function permDeleteMember(id) {
+  const data = getData();
+  const m = data.members.find(x => x.id === id);
+  confirm_(`Permanently delete <strong>${m?.name}</strong>? All their activity data will also be removed. This cannot be undone.`, () => {
+    data.members = data.members.filter(x => x.id !== id);
+    data.logs    = data.logs.filter(x => x.memberId !== id);
+    save(data);
+    renderRBMembers();
+    toast('Permanently deleted');
+  });
+}
+
+function restoreLog(id) {
+  const data = getData();
+  const l = data.logs.find(x => x.id === id);
+  l.deleted = false; l.deletedAt = null;
+  save(data);
+  renderRBLogs();
+  renderLB('lb-home');
+  toast('Activity log restored — points reinstated');
+}
+
+function permDeleteLog(id) {
+  confirm_('Permanently delete this activity log? This cannot be undone.', () => {
+    const data = getData();
+    data.logs = data.logs.filter(x => x.id !== id);
+    save(data);
+    renderRBLogs();
+    toast('Log permanently deleted');
+  });
+}
+
+/* ═══════════════════════════════════════════
+   ADMIN – SETTINGS
+═══════════════════════════════════════════ */
+function loadPointSettings() {
+  const p = getPts();
+  document.getElementById('ptGym').value      = p.gym;
+  document.getElementById('ptCardio').value   = p.cardio;
+  document.getElementById('ptYoga').value     = p.yoga;
+  document.getElementById('ptSteps10').value  = p.steps10k;
+  document.getElementById('ptSteps15').value  = p.steps15k;
+  document.getElementById('ptPenalty').value  = p.penalty;
+  document.getElementById('ptFree').value     = p.free;
+}
+
+function savePointSettings() {
+  const num = (id, def) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) || v < 0 ? def : v; };
+  const def = defaultPts();
+  const points = {
+    gym:      num('ptGym',      def.gym),
+    cardio:   num('ptCardio',   def.cardio),
+    yoga:     num('ptYoga',     def.yoga),
+    steps10k: num('ptSteps10',  def.steps10k),
+    steps15k: num('ptSteps15',  def.steps15k),
+    penalty:  num('ptPenalty',  def.penalty),
+    free:     Math.round(num('ptFree', def.free))
+  };
+  const data = getData();
+  data.points = points;
+  // Recalculate stored points on all active logs
+  data.logs.forEach(l => { if (!l.deleted) l.points = logPts(l); });
+  save(data);
+  refreshPointLabels();
+  renderLB('lb-home');
+  if (document.getElementById('lb-admin').innerHTML) renderLB('lb-admin');
+  toast('Point settings saved — scores recalculated');
+}
+
+function refreshPointLabels() {
+  const p = getPts();
+  const fmt = v => `+${v % 1 === 0 ? v : v} pt`;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmt(v); };
+  set('pts-gym',     p.gym);
+  set('pts-cardio',  p.cardio);
+  set('pts-yoga',    p.yoga);
+  set('pts-steps10', p.steps10k);
+  set('pts-steps15', p.steps15k);
+  // Update the rest-day info box
+  const info = document.getElementById('restDayInfo');
+  if (info) info.innerHTML = `⚠️ Each week (Sun–Sat) you get <strong>${p.free} free rest day${p.free !== 1 ? 's' : ''}</strong>. Every additional rest day deducts <strong>${p.penalty} point${p.penalty !== 1 ? 's' : ''}</strong>.`;
+}
+
+function changeAdminPass() {
+  const curr = document.getElementById('currPass').value;
+  const next = document.getElementById('newPass').value;
+  const conf = document.getElementById('confPass').value;
+  const data = getData();
+  if (curr !== data.adminPassword) { toast('Current password is incorrect', 'error'); return; }
+  if (!next) { toast('New password cannot be empty', 'error'); return; }
+  if (next !== conf) { toast('Passwords do not match', 'error'); return; }
+  data.adminPassword = next;
+  save(data);
+  ['currPass','newPass','confPass'].forEach(id => document.getElementById(id).value = '');
+  toast('Admin password changed');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(getData(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `activity-tracker-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (!d.members || !d.logs) { toast('Invalid backup file', 'error'); return; }
+        confirm_('This will <strong>replace all current data</strong> with the backup. Continue?', () => {
+          save(d);
+          renderAdminMembers();
+          refreshDropdown();
+          renderLB('lb-home');
+          toast('Data imported successfully');
+        });
+      } catch { toast('Could not parse file', 'error'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+/* ═══════════════════════════════════════════
+   USER – LOG ACTIVITY
+═══════════════════════════════════════════ */
+function setDefaultDate() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('actDate').value = today;
+  document.getElementById('actDate').max   = today;
+}
+
+function setupPreview() {
+  const update = () => {
+    const gym    = document.getElementById('aGym').checked;
+    const cardio = document.getElementById('aCardio').checked;
+    const yoga   = document.getElementById('aYoga').checked;
+    const steps  = parseInt(document.querySelector('input[name="steps"]:checked')?.value || '0');
+    const pts    = logPts({ gym, cardio, yoga, steps });
+    const el     = document.getElementById('logPreview');
+    if (pts > 0) {
+      el.innerHTML = `✅ This entry will add <strong style="color:var(--accent)">${pts.toFixed(1)} point${pts !== 1 ? 's' : ''}</strong>`;
+    } else {
+      el.textContent = 'No activities selected — this will be counted as a rest day.';
+    }
+  };
+  ['aGym','aCardio','aYoga'].forEach(id => document.getElementById(id).addEventListener('change', update));
+  document.querySelectorAll('input[name="steps"]').forEach(r => r.addEventListener('change', update));
+  update();
+}
+
+function logActivity() {
+  if (!me || me.type !== 'member') return;
+  const date = document.getElementById('actDate').value;
+  if (!date) { toast('Please select a date', 'error'); return; }
+  const today = new Date().toISOString().split('T')[0];
+  if (date > today) { toast('Cannot log future dates', 'error'); return; }
+
+  const gym    = document.getElementById('aGym').checked;
+  const cardio = document.getElementById('aCardio').checked;
+  const yoga   = document.getElementById('aYoga').checked;
+  const steps  = parseInt(document.querySelector('input[name="steps"]:checked')?.value || '0');
+  const points = logPts({ gym, cardio, yoga, steps });
+
+  const data = getData();
+  const existing = data.logs.find(l => l.memberId === me.id && l.date === date && !l.deleted);
+
+  const doSave = () => {
+    if (existing) {
+      Object.assign(existing, { gym, cardio, yoga, steps, points });
+    } else {
+      data.logs.push({ id: uid(), memberId: me.id, date, gym, cardio, yoga, steps, points, deleted: false, deletedAt: null });
+    }
+    save(data);
+    updateStats();
+    renderLB('lb-home');
+    toast('Activity saved!');
+    // Reset form
+    ['aGym','aCardio','aYoga'].forEach(id => document.getElementById(id).checked = false);
+    const none = document.querySelector('input[name="steps"][value="0"]');
+    none.checked = true; none.dispatchEvent(new Event('change'));
+  };
+
+  if (existing) {
+    confirm_(`You already have an entry for <strong>${fmtDate(date)}</strong>. Replace it?`, doSave);
+  } else {
+    doSave();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   USER – HISTORY
+═══════════════════════════════════════════ */
+function renderUserHistory() {
+  if (!me || me.type !== 'member') return;
+  const data = getData();
+  const el   = document.getElementById('user-history');
+  const logs = data.logs
+    .filter(l => l.memberId === me.id && !l.deleted)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  // Score breakdown
+  const { activity, penalty, total } = memberPoints(me.id);
+  const bd = document.getElementById('uScoreBreakdown');
+  bd.style.display = '';
+  bd.innerHTML = `
+    Activity points: <strong>${activity.toFixed(1)}</strong> &nbsp;
+    <span class="pen">− Rest day deductions: ${penalty.toFixed(1)}</span> &nbsp;
+    = <span class="total">Total: ${total.toFixed(1)}</span>
+    <br><small style="color:var(--muted)">Rest days beyond 2 per week (Sun–Sat) deduct 0.5 pts each.</small>`;
+
+  if (!logs.length) { el.innerHTML = '<p class="empty">No activities logged yet.</p>'; return; }
+
+  el.innerHTML = `
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Activities</th><th>Pts</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${logs.map(l => `
+            <tr>
+              <td style="white-space:nowrap">${fmtDate(l.date)}</td>
+              <td>${actLabel(l)}</td>
+              <td><span class="badge badge-green">${l.points.toFixed(1)}</span></td>
+              <td style="white-space:nowrap">
+                <button class="btn btn-sm btn-secondary" onclick="editLog('${l.id}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteLog('${l.id}')">Delete</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function editLog(logId) {
+  const data = getData();
+  const l = data.logs.find(x => x.id === logId);
+  if (!l) return;
+  const today = new Date().toISOString().split('T')[0];
+  showModal('Edit Activity', `
+    <div class="form-group"><label>Date</label><input type="date" id="_eDate" class="input" value="${l.date}" max="${today}"></div>
+    <div class="form-group">
+      <label>Activities</label>
+      <div class="check-group">
+        <label class="check-label"><input type="checkbox" id="_eGym" ${l.gym ? 'checked' : ''}> 💪 Gym <span class="lbl-pts">+1 pt</span></label>
+        <label class="check-label"><input type="checkbox" id="_eCardio" ${l.cardio ? 'checked' : ''}> 🏃 Cardio/Sport <span class="lbl-pts">+1 pt</span></label>
+        <label class="check-label"><input type="checkbox" id="_eYoga" ${l.yoga ? 'checked' : ''}> 🧘 Yoga/Stretch <span class="lbl-pts">+0.5 pt</span></label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Steps milestone</label>
+      <div class="radio-group">
+        <label class="radio-label"><input type="radio" name="_eSteps" value="0"  ${l.steps === 0  ? 'checked' : ''}> 🚶 None <span class="lbl-pts">—</span></label>
+        <label class="radio-label"><input type="radio" name="_eSteps" value="10" ${l.steps === 10 ? 'checked' : ''}> 👟 10k Steps <span class="lbl-pts">+0.5 pt</span></label>
+        <label class="radio-label"><input type="radio" name="_eSteps" value="15" ${l.steps === 15 ? 'checked' : ''}> 🔥 15k Steps <span class="lbl-pts">+1 pt</span></label>
+      </div>
+    </div>
+  `, 'Save', () => {
+    const newDate = document.getElementById('_eDate').value;
+    if (!newDate) { toast('Date is required', 'error'); return; }
+    if (newDate > today) { toast('Cannot log future dates', 'error'); return; }
+    if (newDate !== l.date) {
+      const conflict = data.logs.find(x => x.memberId === me.id && x.date === newDate && !x.deleted && x.id !== logId);
+      if (conflict) { toast('You already have a log for that date', 'error'); return; }
+    }
+    l.date   = newDate;
+    l.gym    = document.getElementById('_eGym').checked;
+    l.cardio = document.getElementById('_eCardio').checked;
+    l.yoga   = document.getElementById('_eYoga').checked;
+    l.steps  = parseInt(document.querySelector('input[name="_eSteps"]:checked')?.value || '0');
+    l.points = logPts(l);
+    save(data);
+    renderUserHistory();
+    updateStats();
+    renderLB('lb-home');
+    closeModal();
+    toast('Activity updated');
+  });
+}
+
+function deleteLog(logId) {
+  const data = getData();
+  const l = data.logs.find(x => x.id === logId);
+  confirm_(`Delete log for <strong>${fmtDate(l.date)}</strong>? The admin can restore it from the recycle bin.`, () => {
+    l.deleted = true; l.deletedAt = new Date().toISOString();
+    save(data);
+    renderUserHistory();
+    updateStats();
+    renderLB('lb-home');
+    toast('Log moved to recycle bin');
+  });
+}
+
+/* ═══════════════════════════════════════════
+   USER – STATS
+═══════════════════════════════════════════ */
+function updateStats() {
+  if (!me || me.type !== 'member') return;
+  const data = getData();
+  const { total } = memberPoints(me.id);
+  const count  = data.logs.filter(l => l.memberId === me.id && !l.deleted).length;
+  const active = data.members.filter(m => !m.deleted);
+  const ranked = active.map(m => ({ id: m.id, pts: memberPoints(m.id).total })).sort((a, b) => b.pts - a.pts);
+  const rank   = ranked.findIndex(m => m.id === me.id) + 1;
+  document.getElementById('uPts').textContent  = total.toFixed(1);
+  document.getElementById('uLogs').textContent = count;
+  document.getElementById('uRank').textContent = `#${rank}`;
+}
+
+/* ═══════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════ */
+let _cb = null;
+
+function showModal(title, body, okLabel, cb) {
+  document.getElementById('modalTitle').textContent  = title;
+  document.getElementById('modalBody').innerHTML     = body;
+  document.getElementById('modalOkBtn').textContent  = okLabel || 'Confirm';
+  _cb = cb;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function confirm_(msg, cb) {
+  showModal('Confirm', `<p style="line-height:1.7">${msg}</p>`, 'Confirm', cb);
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  _cb = null;
+}
+
+function confirmModal() { if (_cb) _cb(); }
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+(function init() {
+  refreshDropdown();
+  renderLB('lb-home');
+  setDefaultDate();
+  refreshPointLabels();
+
+  // Close modal on backdrop click
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target.id === 'modal') closeModal();
+  });
+})();
+</script>
+</body>
+</html>
